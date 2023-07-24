@@ -70,14 +70,11 @@ namespace TasTool
             // Save current input to this framestate
             SpecialInput = true;
             Player input = ReInput.players.GetPlayer(0);
-            _lastState = new FrameState()
+            _lastState = new FrameState();
+            for (int i = 5; i < 66; i++)
             {
-                //rng = Random.state,
-                Attack = input.GetButton(5),
-                Jump = input.GetButton(6),
-                RangedAttack = input.GetButton(57),
-                Interact = input.GetButton(8),
-            };
+                _lastState.SetInput(i, input.GetButton(i));
+            }
             SpecialInput = false;
 
             // If recording, store the current state for this frame

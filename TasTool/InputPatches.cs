@@ -11,15 +11,7 @@ namespace TasTool
             if (Main.TAS.SpecialInput)
                 return true;
 
-            switch (actionId)
-            {
-                case 5: __result = Main.TAS.CurrentFrameInput.Attack; break;
-                case 6: __result = Main.TAS.CurrentFrameInput.Jump; break;
-                case 8: __result = Main.TAS.CurrentFrameInput.Interact; break;
-                case 57: __result = Main.TAS.CurrentFrameInput.RangedAttack; break;
-                default: return true;
-            }
-
+            __result = Main.TAS.CurrentFrameInput.GetInput(actionId);
             return false;
         }
     }
@@ -32,20 +24,24 @@ namespace TasTool
             if (Main.TAS.SpecialInput)
                 return true;
 
-            switch (actionId)
-            {
-                case 5: __result = Main.TAS.CurrentFrameInput.Attack; break; // Also check if not pressed last frame
-                case 6: __result = Main.TAS.CurrentFrameInput.Jump; break;
-                case 8: __result = Main.TAS.CurrentFrameInput.Interact; break;
-                case 57: __result = Main.TAS.CurrentFrameInput.RangedAttack; break;
-                default: return true;
-            }
-
+            __result = Main.TAS.CurrentFrameInput.GetInput(actionId);
             return false;
         }
     }
 
-    // GetButtonUp
+    [HarmonyPatch(typeof(Player), "GetButtonUp", typeof(int))]
+    class ButtonUp_Patch
+    {
+        public static bool Prefix(int actionId, ref bool __result)
+        {
+            if (Main.TAS.SpecialInput)
+                return true;
+
+            __result = !Main.TAS.CurrentFrameInput.GetInput(actionId);
+            return false;
+        }
+    }
+
     // GetButtonPrev
 
     // GetButtonSinglePressHold
