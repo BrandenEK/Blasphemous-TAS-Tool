@@ -51,7 +51,7 @@ namespace TasTool
 
         protected override void LevelLoaded(string oldLevel, string newLevel)
         {
-            if (_frameCountText == null)
+            if (_textObjects == null)
                 CreateFrameCountText();
         }
 
@@ -96,9 +96,14 @@ namespace TasTool
             }
 
 
-            // Update frame text
-            if (_frameCountText != null)
-                _frameCountText.text = $"Frame: {_currentFrame}\t\tStatus: {_currentMode}\t\tInput: {_lastState.Input.ToString("X").PadLeft(8, '0')}";
+            // Update text display
+            if (_textObjects != null)
+            {
+                _textObjects[0].text = $"Frame: {_currentFrame}";
+                _textObjects[1].text = $"Status: {_currentMode}";
+                _textObjects[2].text = $"Input: {_lastState.Input.ToHex()}";
+                _textObjects[3].text = $"RNG: {Random.state.s0.ToHex()}:{Random.state.s1.ToHex()}:{Random.state.s2.ToHex()}:{Random.state.s3.ToHex()}";
+            }
 
             // If time is not frozen, increase the frame count
             if (Time.timeScale > 0 && !Core.LevelManager.InsideChangeLevel)
@@ -192,7 +197,7 @@ namespace TasTool
 
         #region UI Display
 
-        private Text _frameCountText;
+        private Text[] _textObjects;
 
         private void CreateFrameCountText()
         {
@@ -219,25 +224,30 @@ namespace TasTool
             if (textObject == null || parent == null)
                 return;
 
-            GameObject newText = Object.Instantiate(textObject, parent);
-            newText.name = "FrameCountText";
-            newText.SetActive(true);
+            _textObjects = new Text[4];
+            for (int i = 0; i < _textObjects.Length; i++)
+            {
+                GameObject newText = Object.Instantiate(textObject, parent);
+                newText.name = "TasText";
+                newText.SetActive(true);
 
-            RectTransform rect = newText.GetComponent<RectTransform>();
-            rect.anchorMin = new Vector2(0f, 0f);
-            rect.anchorMax = new Vector2(0f, 0f);
-            rect.pivot = new Vector2(0f, 1f);
-            rect.anchoredPosition = new Vector2(10f, 20f);
-            rect.sizeDelta = new Vector2(250f, 18f);
+                RectTransform rect = newText.GetComponent<RectTransform>();
+                rect.anchorMin = new Vector2(0f, 0f);
+                rect.anchorMax = new Vector2(0f, 0f);
+                rect.pivot = new Vector2(0f, 1f);
+                rect.anchoredPosition = new Vector2(10f + 150f * i, 20f);
+                rect.sizeDelta = new Vector2(250f, 18f);
 
-            Text text = newText.GetComponent<Text>();
-            text.color = Color.white;
-            text.text = string.Empty;
-            text.alignment = TextAnchor.MiddleLeft;
-            text.horizontalOverflow = HorizontalWrapMode.Overflow;
+                Text text = newText.GetComponent<Text>();
+                text.color = Color.white;
+                text.text = string.Empty;
+                text.alignment = TextAnchor.MiddleLeft;
+                text.horizontalOverflow = HorizontalWrapMode.Overflow;
 
-            Log("Created frame count text");
-            _frameCountText = text;
+                _textObjects[i] = text;
+            }
+
+            Log("Created text objects");
         }
 
         #endregion UI Display
