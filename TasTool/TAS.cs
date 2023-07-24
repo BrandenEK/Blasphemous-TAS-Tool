@@ -25,7 +25,9 @@ namespace TasTool
 
         private FrameState _lastState;
 
-        private List<FrameState> _frameStates = new();
+        // These are only initialized when recording/playing a tas
+        private List<FrameState> _frameStates;
+        private Random.State _initialRng;
 
 
         protected override void Initialize()
@@ -36,12 +38,20 @@ namespace TasTool
             {
                 LogWarning("Starting TAS playback");
                 _currentMode = TasMode.Playing;
+
+                // Load framestates list and set rng
                 LoadTasFromFile();
+                Random.state = _initialRng;
+
             }
             else if (UnityEngine.Input.GetKey(KeyCode.RightBracket))
             {
                 LogWarning("Starting TAS recording");
                 _currentMode = TasMode.Recording;
+
+                // Create framestates list and store rng
+                _frameStates = new List<FrameState>();
+                _initialRng = Random.state;
             }
             else
             {
@@ -102,7 +112,7 @@ namespace TasTool
                 _textObjects[0].text = $"Frame: {_currentFrame}";
                 _textObjects[1].text = $"Status: {_currentMode}";
                 _textObjects[2].text = $"Input: {_lastState.Input.ToHex()}";
-                _textObjects[3].text = $"RNG: {Random.state.s0.ToHex()}:{Random.state.s1.ToHex()}:{Random.state.s2.ToHex()}:{Random.state.s3.ToHex()}";
+                _textObjects[3].text = $"       {Random.state.s0.ToHex()}:{Random.state.s1.ToHex()}\nRNG: {Random.state.s2.ToHex()}:{Random.state.s3.ToHex()}";
             }
 
             // If time is not frozen, increase the frame count
@@ -164,12 +174,22 @@ namespace TasTool
                 return;
 
             byte[] bytes = File.ReadAllBytes(tasPath);
-            int totalFrames = bytes.Length / 4;
+            int totalFrames = (bytes.Length - 16) / 4;
             _frameStates = new List<FrameState>(totalFrames);
 
+            // Get initial rng value
+            _initialRng = new Random.State
+            {
+                s0 = System.BitConverter.ToInt32(bytes, 0),
+                s1 = System.BitConverter.ToInt32(bytes, 4),
+                s2 = System.BitConverter.ToInt32(bytes, 8),
+                s3 = System.BitConverter.ToInt32(bytes, 12)
+            };
+
+            // Get input for each frame
             for (int i = 0; i < totalFrames; i++)
             {
-                int input = System.BitConverter.ToInt32(bytes, 4 * i);
+                int input = System.BitConverter.ToInt32(bytes, 4 * i + 16);
                 _frameStates.Add(new FrameState(input));
             }
 
@@ -178,15 +198,19 @@ namespace TasTool
 
         private void SaveTasToFile()
         {
-            var bytes = new byte[4 * _frameStates.Count];
+            var bytes = new byte[4 * _frameStates.Count + 16];
 
+            // Add initial rng value
+            bytes.SetBytes(System.BitConverter.GetBytes(_initialRng.s0), 0);
+            bytes.SetBytes(System.BitConverter.GetBytes(_initialRng.s1), 4);
+            bytes.SetBytes(System.BitConverter.GetBytes(_initialRng.s2), 8);
+            bytes.SetBytes(System.BitConverter.GetBytes(_initialRng.s3), 12);
+
+            // Add input for each frame
             for (int i = 0; i < _frameStates.Count; i++)
             {
                 byte[] input = System.BitConverter.GetBytes(_frameStates[i].Input);
-                bytes[4 * i + 0] = input[0];
-                bytes[4 * i + 1] = input[1];
-                bytes[4 * i + 2] = input[2];
-                bytes[4 * i + 3] = input[3];
+                bytes.SetBytes(input, 4 * i + 16);
             }
 
             File.WriteAllBytes(tasPath, bytes);
@@ -235,14 +259,14 @@ namespace TasTool
                 rect.anchorMin = new Vector2(0f, 0f);
                 rect.anchorMax = new Vector2(0f, 0f);
                 rect.pivot = new Vector2(0f, 1f);
-                rect.anchoredPosition = new Vector2(10f + 150f * i, 20f);
-                rect.sizeDelta = new Vector2(250f, 18f);
+                rect.anchoredPosition = new Vector2(10f + 150f * i, 57f);
+                rect.sizeDelta = new Vector2(250f, 50f);
 
                 Text text = newText.GetComponent<Text>();
                 text.color = Color.white;
                 text.text = string.Empty;
-                text.alignment = TextAnchor.MiddleLeft;
-                text.horizontalOverflow = HorizontalWrapMode.Overflow;
+                text.alignment = TextAnchor.LowerLeft;
+                text.horizontalOverflow = HorizontalWrapMode.Wrap;
 
                 _textObjects[i] = text;
             }
