@@ -99,7 +99,7 @@ namespace TasTool
                 _frameCountText.text = $"Frame: {_currentFrame}\t\tStatus: {_currentMode}";
 
             // If time is not frozen, increase the frame count
-            if (Time.timeScale > 0)
+            if (Time.timeScale > 0 && !Core.LevelManager.InsideChangeLevel)
             {
                 _currentFrame++;
                 if (_timeFrozen)
