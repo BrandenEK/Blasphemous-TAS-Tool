@@ -13,9 +13,8 @@ namespace TasTool
     {
         public TAS(string modId, string modName, string modVersion) : base(modId, modName, modVersion) { }
         
+        // A flag used to determine whether rewired should actually read input
         public bool SpecialInput { get; private set; }
-
-        public FrameState CurrentFrameInput => _lastState;
 
         private bool _timeFrozen;
 
@@ -23,7 +22,12 @@ namespace TasTool
 
         private TasMode _currentMode;
 
-        private FrameState _lastState;
+        // These control the input for the most recent two frames
+        public FrameState CurrentFrameInput => Time.timeScale > 0 ? _currentState : _emptyState;
+        public FrameState PreviousFrameInput => Time.timeScale > 0 ? _previousState : _emptyState;
+        private FrameState _currentState;
+        private FrameState _previousState;
+        private FrameState _emptyState;
 
         // These are only initialized when recording/playing a tas
         private List<FrameState> _frameStates;
@@ -33,6 +37,10 @@ namespace TasTool
         protected override void Initialize()
         {
             DisableFileLogging = true;
+
+            _previousState = new FrameState();
+            _currentState = new FrameState();
+            _emptyState = new FrameState();
 
             if (UnityEngine.Input.GetKey(KeyCode.LeftBracket))
             {
@@ -67,13 +75,15 @@ namespace TasTool
 
         protected override void LateUpdate()
         {
-            // Save current input to this framestate
+            // Save current and previous frame input
             SpecialInput = true;
             Player input = ReInput.players.GetPlayer(0);
-            _lastState = new FrameState();
+            if (Time.timeScale > 0)
+                _previousState = _currentState;
+            _currentState = new FrameState();
             for (int i = 5; i < 66; i++)
             {
-                _lastState.SetInput(i, input.GetButton(i));
+                _currentState.SetInput(i, input.GetButton(i));
             }
             SpecialInput = false;
 
@@ -82,11 +92,11 @@ namespace TasTool
             {
                 if (_frameStates.Count <= _currentFrame)
                 {
-                    _frameStates.Add(_lastState);
+                    _frameStates.Add(_currentState);
                 }
                 else
                 {
-                    _frameStates[_currentFrame] = _lastState;
+                    _frameStates[_currentFrame] = _currentState;
                 }
             }
             // If playing, display the input for this frame
@@ -94,7 +104,7 @@ namespace TasTool
             {
                 if (_frameStates.Count > _currentFrame)
                 {
-                    _lastState = _frameStates[_currentFrame];
+                    _currentState = _frameStates[_currentFrame];
                 }
                 else
                 {
@@ -108,7 +118,7 @@ namespace TasTool
             {
                 _textObjects[0].text = $"Frame: {_currentFrame}";
                 _textObjects[1].text = $"Status: {_currentMode}";
-                _textObjects[2].text = $"Input: {_lastState.Input.ToHex()}";
+                _textObjects[2].text = $"Input: {_currentState.Input.ToHex()}";
                 _textObjects[3].text = $"       {Random.state.s0.ToHex()}:{Random.state.s1.ToHex()}\nRNG: {Random.state.s2.ToHex()}:{Random.state.s3.ToHex()}";
             }
 
@@ -132,7 +142,7 @@ namespace TasTool
                 FrameAdvance();
             }
             // Button to end and save the tas
-            else if (UnityEngine.Input.GetKeyDown(KeyCode.P))
+            else if (UnityEngine.Input.GetKeyDown(KeyCode.F12))
             {
                 SaveTasToFile();
                 _currentMode = TasMode.Nothing;

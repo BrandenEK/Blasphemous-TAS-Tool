@@ -24,7 +24,7 @@ namespace TasTool
             if (Main.TAS.SpecialInput)
                 return true;
 
-            __result = Main.TAS.CurrentFrameInput.GetInput(actionId);
+            __result = Main.TAS.CurrentFrameInput.GetInput(actionId) && !Main.TAS.PreviousFrameInput.GetInput(actionId);
             return false;
         }
     }
@@ -37,7 +37,7 @@ namespace TasTool
             if (Main.TAS.SpecialInput)
                 return true;
 
-            __result = !Main.TAS.CurrentFrameInput.GetInput(actionId);
+            __result = !Main.TAS.CurrentFrameInput.GetInput(actionId) && Main.TAS.PreviousFrameInput.GetInput(actionId);
             return false;
         }
     }
