@@ -58,13 +58,16 @@ namespace TasTool
 
         protected override void LateUpdate()
         {
+            // Save current input to this framestate
             SpecialInput = true;
             Player input = ReInput.players.GetPlayer(0);
             _lastState = new FrameState()
             {
                 //rng = Random.state,
-                aKey = input.GetButton(6),
-                bKey = input.GetButton(57),
+                Attack = input.GetButton(5),
+                Jump = input.GetButton(6),
+                RangedAttack = input.GetButton(57),
+                Interact = input.GetButton(8),
             };
             SpecialInput = false;
 
@@ -72,9 +75,13 @@ namespace TasTool
             if (_currentMode == TasMode.Recording)
             {
                 if (_frameStates.Count <= _currentFrame)
+                {
                     _frameStates.Add(_lastState);
+                }
                 else
+                {
                     _frameStates[_currentFrame] = _lastState;
+                }
             }
             // If playing, display the input for this frame
             else if (_currentMode == TasMode.Playing)
@@ -82,10 +89,6 @@ namespace TasTool
                 if (_frameStates.Count > _currentFrame)
                 {
                     _lastState = _frameStates[_currentFrame];
-                    if (_lastState.aKey)
-                        LogError("Pressed A on this frame");
-                    if (_lastState.bKey)
-                        LogError("Pressed B on this frame");
                 }
                 else
                 {
@@ -96,7 +99,7 @@ namespace TasTool
 
             // Update frame text
             if (_frameCountText != null)
-                _frameCountText.text = $"Frame: {_currentFrame}\t\tStatus: {_currentMode}";
+                _frameCountText.text = $"Frame: {_currentFrame}\t\tStatus: {_currentMode}\t\tInput: {_lastState.Input.ToString("X").PadLeft(8, '0')}";
 
             // If time is not frozen, increase the frame count
             if (Time.timeScale > 0 && !Core.LevelManager.InsideChangeLevel)
@@ -153,17 +156,37 @@ namespace TasTool
 
         private void LoadTasFromFile()
         {
-            if (File.Exists(tasPath))
+            if (!File.Exists(tasPath))
+                return;
+
+            byte[] bytes = File.ReadAllBytes(tasPath);
+            int totalFrames = bytes.Length / 4;
+            _frameStates = new List<FrameState>(totalFrames);
+
+            for (int i = 0; i < totalFrames; i++)
             {
-                string json = File.ReadAllText(tasPath);
-                _frameStates = JsonConvert.DeserializeObject<List<FrameState>>(json);
+                int input = System.BitConverter.ToInt32(bytes, 4 * i);
+                _frameStates.Add(new FrameState(input));
             }
+
+            LogWarning($"Loaded {_frameStates.Count} frames from {tasPath}");
         }
 
         private void SaveTasToFile()
         {
-            string json = JsonConvert.SerializeObject(_frameStates);
-            File.WriteAllText(tasPath, json);
+            var bytes = new byte[4 * _frameStates.Count];
+
+            for (int i = 0; i < _frameStates.Count; i++)
+            {
+                byte[] input = System.BitConverter.GetBytes(_frameStates[i].Input);
+                bytes[4 * i + 0] = input[0];
+                bytes[4 * i + 1] = input[1];
+                bytes[4 * i + 2] = input[2];
+                bytes[4 * i + 3] = input[3];
+            }
+
+            File.WriteAllBytes(tasPath, bytes);
+            LogWarning($"Saved {_frameStates.Count} frames to {tasPath}");
         }
 
         #endregion File I/O
@@ -212,6 +235,7 @@ namespace TasTool
             text.color = Color.white;
             text.text = string.Empty;
             text.alignment = TextAnchor.MiddleLeft;
+            text.horizontalOverflow = HorizontalWrapMode.Overflow;
 
             Log("Created frame count text");
             _frameCountText = text;

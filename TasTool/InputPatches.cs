@@ -13,12 +13,12 @@ namespace TasTool
 
             if (actionId == 6)
             {
-                __result = Main.TAS.CurrentFrameInput.aKey; // Check if frame before is not pressed
+                __result = Main.TAS.CurrentFrameInput.Jump; // Check if frame before is not pressed
                 return false;
             }
             else if (actionId == 57)
             {
-                __result = Main.TAS.CurrentFrameInput.bKey;
+                __result = Main.TAS.CurrentFrameInput.RangedAttack;
                 return false;
             }
 
@@ -36,12 +36,12 @@ namespace TasTool
 
             if (actionId == 6)
             {
-                __result = Main.TAS.CurrentFrameInput.aKey;
+                __result = Main.TAS.CurrentFrameInput.Jump;
                 return false;
             }
             else if (actionId == 57)
             {
-                __result = Main.TAS.CurrentFrameInput.bKey;
+                __result = Main.TAS.CurrentFrameInput.RangedAttack;
                 return false;
             }
 
