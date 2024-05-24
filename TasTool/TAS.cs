@@ -1,6 +1,6 @@
 ﻿using Framework.Managers;
 using Gameplay.UI.Others.UIGameLogic;
-using ModdingAPI;
+using Blasphemous.ModdingAPI;
 using Rewired;
 using System.Collections.Generic;
 using System.IO;
@@ -9,9 +9,9 @@ using UnityEngine.UI;
 
 namespace TasTool
 {
-    public class TAS : Mod
+    public class TAS : BlasMod
     {
-        public TAS(string modId, string modName, string modVersion) : base(modId, modName, modVersion) { }
+        public TAS() : base(ModInfo.MOD_ID, ModInfo.MOD_NAME, ModInfo.MOD_AUTHOR, ModInfo.MOD_VERSION) { }
         
         // A flag used to determine whether rewired should actually read input
         public bool SpecialInput { get; private set; }
@@ -34,47 +34,55 @@ namespace TasTool
         private Random.State _initialRng;
 
 
-        protected override void Initialize()
-        {
-            DisableFileLogging = true;
+        private Config _config = new();
+        public int FrameRate => _config.Fps;
 
+        protected override void OnInitialize()
+        {
             _previousState = new FrameState();
             _currentState = new FrameState();
             _emptyState = new FrameState();
 
-            if (UnityEngine.Input.GetKey(KeyCode.LeftBracket))
+            _currentMode = TasMode.Nothing;
+
+            _config = ConfigHandler.Load<Config>();
+            ConfigHandler.Save(_config);
+            Application.targetFrameRate = _config.Fps;
+        }
+
+        protected override void OnLevelLoaded(string oldLevel, string newLevel)
+        {
+            if (_textObjects == null)
+                CreateFrameCountText();
+        }
+
+        protected override void OnLateUpdate()
+        {
+            if (UnityEngine.Input.GetKeyDown(KeyCode.LeftBracket))
             {
                 LogWarning("Starting TAS playback");
                 _currentMode = TasMode.Playing;
 
                 // Load framestates list and set rng
                 LoadTasFromFile();
-                Random.state = _initialRng;
-
+                Random.InitState(_config.Rng);
+                _currentFrame = 0;
             }
-            else if (UnityEngine.Input.GetKey(KeyCode.RightBracket))
+            else if (UnityEngine.Input.GetKeyDown(KeyCode.RightBracket))
             {
                 LogWarning("Starting TAS recording");
                 _currentMode = TasMode.Recording;
 
                 // Create framestates list and store rng
                 _frameStates = new List<FrameState>();
-                _initialRng = Random.state;
+                Random.InitState(_config.Rng);
+                _currentFrame = 0;
             }
-            else
+            else if (UnityEngine.Input.GetKeyDown(KeyCode.Backslash))
             {
                 _currentMode = TasMode.Nothing;
             }
-        }
 
-        protected override void LevelLoaded(string oldLevel, string newLevel)
-        {
-            if (_textObjects == null)
-                CreateFrameCountText();
-        }
-
-        protected override void LateUpdate()
-        {
             // Save current and previous frame input
             SpecialInput = true;
             Player input = ReInput.players.GetPlayer(0);
@@ -85,6 +93,8 @@ namespace TasTool
             {
                 _currentState.SetInput(i, input.GetButton(i));
             }
+            _currentState.SetAxis(0, input.GetAxisRaw(0));
+            _currentState.SetAxis(4, input.GetAxisRaw(4));
             SpecialInput = false;
 
             // If recording, store the current state for this frame
@@ -112,6 +122,7 @@ namespace TasTool
                 }
             }
 
+            LogError($"FPS: {Application.targetFrameRate}, DeltaTime: {Time.deltaTime}, TimeScale: {Time.timeScale}");
 
             // Update text display
             if (_textObjects != null)
@@ -123,7 +134,7 @@ namespace TasTool
             }
 
             // If time is not frozen, increase the frame count
-            if (Time.timeScale > 0 && !Core.LevelManager.InsideChangeLevel)
+            if (Time.timeScale > 0 && !Core.LevelManager.InsideChangeLevel && _currentMode != TasMode.Nothing)
             {
                 _currentFrame++;
                 if (_timeFrozen)
@@ -142,7 +153,7 @@ namespace TasTool
                 FrameAdvance();
             }
             // Button to end and save the tas
-            else if (UnityEngine.Input.GetKeyDown(KeyCode.F12))
+            else if (UnityEngine.Input.GetKeyDown(KeyCode.F11))
             {
                 SaveTasToFile();
                 _currentMode = TasMode.Nothing;
@@ -181,7 +192,7 @@ namespace TasTool
                 return;
 
             byte[] bytes = File.ReadAllBytes(tasPath);
-            int totalFrames = (bytes.Length - 16) / 4;
+            int totalFrames = (bytes.Length - 16) / 12;
             _frameStates = new List<FrameState>(totalFrames);
 
             // Get initial rng value
@@ -196,8 +207,12 @@ namespace TasTool
             // Get input for each frame
             for (int i = 0; i < totalFrames; i++)
             {
-                int input = System.BitConverter.ToInt32(bytes, 4 * i + 16);
-                _frameStates.Add(new FrameState(input));
+                int input = System.BitConverter.ToInt32(bytes, 12 * i + 16);
+                var state = new FrameState(input);
+                state.SetAxis(0, System.BitConverter.ToSingle(bytes, 12 * i + 20));
+                state.SetAxis(4, System.BitConverter.ToSingle(bytes, 12 * i + 24));
+
+                _frameStates.Add(state);
             }
 
             LogWarning($"Loaded {_frameStates.Count} frames from {tasPath}");
@@ -205,7 +220,7 @@ namespace TasTool
 
         private void SaveTasToFile()
         {
-            var bytes = new byte[4 * _frameStates.Count + 16];
+            var bytes = new byte[12 * _frameStates.Count + 16];
 
             // Add initial rng value
             bytes.SetBytes(System.BitConverter.GetBytes(_initialRng.s0), 0);
@@ -217,7 +232,10 @@ namespace TasTool
             for (int i = 0; i < _frameStates.Count; i++)
             {
                 byte[] input = System.BitConverter.GetBytes(_frameStates[i].Input);
-                bytes.SetBytes(input, 4 * i + 16);
+                bytes.SetBytes(input, 12 * i + 16);
+
+                bytes.SetBytes(System.BitConverter.GetBytes(_frameStates[i].GetAxis(0)), 12 * i + 20);
+                bytes.SetBytes(System.BitConverter.GetBytes(_frameStates[i].GetAxis(4)), 12 * i + 24);
             }
 
             File.WriteAllBytes(tasPath, bytes);
@@ -266,7 +284,7 @@ namespace TasTool
                 rect.anchorMin = new Vector2(0f, 0f);
                 rect.anchorMax = new Vector2(0f, 0f);
                 rect.pivot = new Vector2(0f, 1f);
-                rect.anchoredPosition = new Vector2(10f + 150f * i, 57f);
+                rect.anchoredPosition = new Vector2(10f + 150f * i, 90f);
                 rect.sizeDelta = new Vector2(250f, 50f);
 
                 Text text = newText.GetComponent<Text>();

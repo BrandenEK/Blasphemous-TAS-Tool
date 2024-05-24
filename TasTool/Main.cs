@@ -2,16 +2,15 @@
 
 namespace TasTool
 {
-    [BepInPlugin(PluginInfo.PLUGIN_GUID, PluginInfo.PLUGIN_NAME, PluginInfo.PLUGIN_VERSION)]
-    [BepInDependency("com.damocles.blasphemous.modding-api", "1.4.0")]
-    [BepInProcess("Blasphemous.exe")]
+    [BepInPlugin(ModInfo.MOD_ID, ModInfo.MOD_NAME, ModInfo.MOD_VERSION)]
+    [BepInDependency("Blasphemous.ModdingAPI", "2.1.0")]
     public class Main : BaseUnityPlugin
     {
         public static TAS TAS { get; private set; }
 
         private void Start()
         {
-            TAS = new TAS(PluginInfo.PLUGIN_GUID, PluginInfo.PLUGIN_NAME, PluginInfo.PLUGIN_VERSION);
+            TAS = new TAS();
         }
     }
 }

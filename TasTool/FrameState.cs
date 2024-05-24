@@ -9,6 +9,9 @@ namespace TasTool
 
         private int _input;
 
+        private float _axisMoveX; // 0 raw (48)
+        private float _axisMoveY; // 4 both (49)
+
         public int Input => _input;
 
         public FrameState(int input)
@@ -56,6 +59,24 @@ namespace TasTool
                 return;
 
             _input |= (value ? 1 : 0) << bit;
+        }
+
+        public void SetAxis(int axis, float value)
+        {
+            if (axis == 0)
+                _axisMoveX = value;
+            else if (axis == 4)
+                _axisMoveY = value;
+        }
+
+        public float GetAxis(int axis)
+        {
+            if (axis == 0)
+                return _axisMoveX;
+            else if (axis == 4)
+                return _axisMoveY;
+
+            return 0;
         }
 
         private int ConvertInputToBit(int input)

@@ -10,55 +10,10 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
-    <PackageReference Include="BepInEx.Core" Version="5.*" />
-    <PackageReference Include="BepInEx.PluginInfoProps" Version="1.*" />
-    <PackageReference Include="UnityEngine.Modules" Version="2017.4.40" IncludeAssets="compile" />
-  </ItemGroup>
-  
-  <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
-    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.2" PrivateAssets="all" />
-  </ItemGroup>
   
   <ItemGroup>
-    <Reference Include="0Harmony">
-      <HintPath>..\lib\0Harmony.dll</HintPath>
-    </Reference>
-    <Reference Include="Assembly-CSharp">
-      <HintPath>..\lib\Assembly-CSharp.dll</HintPath>
-    </Reference>
-    <Reference Include="Assembly-CSharp-firstpass">
-      <HintPath>..\lib\Assembly-CSharp-firstpass.dll</HintPath>
-    </Reference>
-    <Reference Include="BepInEx">
-      <HintPath>..\lib\BepInEx.dll</HintPath>
-    </Reference>
-    <Reference Include="ModdingAPI">
-      <HintPath>..\lib\ModdingAPI.dll</HintPath>
-    </Reference>
-    <Reference Include="PlayMaker">
-      <HintPath>..\lib\PlayMaker.dll</HintPath>
-    </Reference>
-    <Reference Include="Rewired_Core">
-      <HintPath>..\lib\Rewired_Core.dll</HintPath>
-    </Reference>
-    <Reference Include="Sirenix.Serialization">
-      <HintPath>..\lib\Sirenix.Serialization.dll</HintPath>
-    </Reference>
-    <Reference Include="TextMeshPro-2017.3-Runtime">
-      <HintPath>..\lib\TextMeshPro-2017.3-Runtime.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine">
-      <HintPath>..\lib\UnityEngine.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.CoreModule">
-      <HintPath>..\lib\UnityEngine.CoreModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.UI">
-      <HintPath>..\lib\UnityEngine.UI.dll</HintPath>
-    </Reference>
+    <PackageReference Include="Blasphemous.ModdingAPI" Version="2.1.0" />
+    <PackageReference Include="Blasphemous.ModdingReferences" Version="4.0.67" />
   </ItemGroup>
 
   <Target Name="Development" AfterTargets="PostBuildEvent">
@@ -78,7 +33,7 @@
 
     <!-- Copy plugin & resources to development folder -->
     <PropertyGroup>
-      <DevFolder>C:\Users\Damocles\Documents\Speedrunning\Blasphemous\Modding Dev\Modding\</DevFolder>
+      <DevFolder>C:\Program Files (x86)\Steam\steamapps\common\Blasphemous\Modding\</DevFolder>
     </PropertyGroup>
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DevFolder)plugins" />
     <Copy SourceFiles="@(Config)" DestinationFolder="$(DevFolder)config" />
@@ -100,6 +55,25 @@
     <Copy SourceFiles="@(Levels)" DestinationFolder="$(ExportFolder)levels\$(BepInExPluginName)" />
     <Copy SourceFiles="@(Localization)" DestinationFolder="$(ExportFolder)localization" />
     <ZipDirectory SourceDirectory="$(ExportFolder)" DestinationFile="$(ExportFolder)..\$(TargetName).zip" Overwrite="true" />
+
+  </Target>
+
+  <Target Name="AddGeneratedFile" BeforeTargets="BeforeCompile;CoreCompile" Inputs="$(MSBuildAllProjects)" Outputs="$(IntermediateOutputPath)GeneratedFile.cs">
+
+    <!-- Create ModInfo class from relevant data -->
+    <PropertyGroup>
+      <GeneratedText>
+        <![CDATA[ namespace $(RootNamespace) { internal static class ModInfo { public const string MOD_ID = "$(AssemblyName)"%3B public const string MOD_NAME = "$(Product)"%3B public const string MOD_AUTHOR = "$(Company)"%3B public const string MOD_VERSION = "$(Version)"%3B } } ]]>
+      </GeneratedText>
+      <GeneratedFilePath>$(IntermediateOutputPath)ModInfo.cs</GeneratedFilePath>
+    </PropertyGroup>
+
+    <!-- Write ModInfo data to intermediate output -->
+    <ItemGroup>
+      <Compile Include="$(GeneratedFilePath)" />
+      <FileWrites Include="$(GeneratedFilePath)" />
+    </ItemGroup>
+    <WriteLinesToFile Lines="$(GeneratedText)" File="$(GeneratedFilePath)" WriteOnlyWhenDifferent="true" Overwrite="true" />
 
   </Target>
 </Project>
