@@ -6,17 +6,26 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
+using System.Threading;
+using System.Runtime.InteropServices;
 
 namespace TasTool
 {
     public class TAS : BlasMod
     {
+        [DllImport("user32.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.StdCall)]
+        public static extern short GetAsyncKeyState(int vKey);
+
+        private const int PAUSE_KEY = 0x21;
+        private const int ADVANCE_KEY = 0x22;
+
         public TAS() : base(ModInfo.MOD_ID, ModInfo.MOD_NAME, ModInfo.MOD_AUTHOR, ModInfo.MOD_VERSION) { }
         
         // A flag used to determine whether rewired should actually read input
         public bool SpecialInput { get; private set; }
 
         private bool _timeFrozen;
+        public float PreviousTimeScale { get; private set; } = 1;
 
         private int _currentFrame;
 
@@ -32,7 +41,6 @@ namespace TasTool
         // These are only initialized when recording/playing a tas
         private List<FrameState> _frameStates;
         private Random.State _initialRng;
-
 
         private Config _config = new();
         public int FrameRate => _config.Fps;
@@ -122,7 +130,7 @@ namespace TasTool
                 }
             }
 
-            LogError($"FPS: {Application.targetFrameRate}, DeltaTime: {Time.deltaTime}, TimeScale: {Time.timeScale}");
+            //LogError($"FPS: {Application.targetFrameRate}, DeltaTime: {Time.deltaTime}, TimeScale: {Time.timeScale}");
 
             // Update text display
             if (_textObjects != null)
@@ -144,35 +152,70 @@ namespace TasTool
             // Button to toggle frozen time
             if (UnityEngine.Input.GetKeyDown(KeyCode.Minus))
             {
-                if (_timeFrozen) UnfreezeTime();
-                else FreezeTime();
+                FreezeTime();
+                //if (_timeFrozen) UnfreezeTime();
+                //else FreezeTime();
             }
-            // Button to frame advance
-            else if (UnityEngine.Input.GetKeyDown(KeyCode.Equals))
+
+            if (_timeFrozen)
             {
-                FrameAdvance();
+                while (true)
+                {
+                    Thread.Sleep(100);
+
+                    //_textObjects[0].text = $"Frame: {_currentFrame} (Paused)";
+
+                    //LogWarning("Checking input: " + GetAsyncKeyState(PAUSE_KEY));
+                    if ((GetAsyncKeyState(PAUSE_KEY) & 0x8000) > 0)
+                    {
+                        UnfreezeTime();
+                        break;
+                    }
+
+                    if ((System.DateTime.Now.Ticks - _lastAdvanceTime > 5_000_000) && (GetAsyncKeyState(ADVANCE_KEY) & 0x8000) > 0)
+                    {
+                        FrameAdvance();
+                        _lastAdvanceTime = System.DateTime.Now.Ticks;
+                        break;
+                    }
+                }
+
+                //if (UnityEngine.Input.GetKey(KeyCode.Equals))
+                //    UnfreezeTime();
+
+                //Thread.Sleep(1000);
             }
+
+            // Button to frame advance
+            //else if (UnityEngine.Input.GetKeyDown(KeyCode.Equals))
+            //{
+            //    FrameAdvance();
+            //}
             // Button to end and save the tas
             else if (UnityEngine.Input.GetKeyDown(KeyCode.F11))
             {
                 SaveTasToFile();
                 _currentMode = TasMode.Nothing;
             }
+
+            PreviousTimeScale = Time.timeScale;
         }
+
+        private long _lastAdvanceTime = System.DateTime.Now.Ticks;
 
         private void FreezeTime()
         {
             LogWarning("Freezing time");
-            Core.Logic.CurrentLevelConfig.TimeScale = 0;
-            Time.timeScale = 0;
+            //Core.Logic.CurrentLevelConfig.TimeScale = 0;
+            //Time.timeScale = 0;
             _timeFrozen = true;
         }
 
         private void UnfreezeTime()
         {
             LogWarning("Unfreezing time");
-            Core.Logic.CurrentLevelConfig.TimeScale = 1;
-            Time.timeScale = 1;
+            //Core.Logic.CurrentLevelConfig.TimeScale = 1;
+            //Time.timeScale = 1;
             _timeFrozen = false;
         }
 

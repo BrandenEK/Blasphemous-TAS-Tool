@@ -43,6 +43,19 @@ namespace TasTool
         }
     }
 
+    [HarmonyPatch(typeof(Player), nameof(Player.GetButtonPrev), typeof(int))]
+    class Input_GetButtonPrev_Patch
+    {
+        public static bool Prefix(int actionId, ref bool __result)
+        {
+            if (Main.TAS.SpecialInput)
+                return true;
+
+            __result = Main.TAS.PreviousFrameInput.GetInput(actionId);
+            return false;
+        }
+    }
+
     [HarmonyPatch(typeof(Player), nameof(Player.GetAxis), typeof(int))]
     class Input_GetAxis_Patch
     {
@@ -74,7 +87,7 @@ namespace TasTool
     {
         public static void Postfix(ref float __result)
         {
-            __result = Time.timeScale / Main.TAS.FrameRate;
+            __result = Main.TAS.PreviousTimeScale / Main.TAS.FrameRate;
         }
     }
 
