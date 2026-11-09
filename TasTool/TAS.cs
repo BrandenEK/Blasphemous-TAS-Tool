@@ -26,27 +26,31 @@ namespace TasTool
         private long _lastAdvanceTime = System.DateTime.Now.Ticks;
 
         private TasMode _currentMode;
+        private Text _textDisplay;
 
         protected override void OnInitialize()
         {
             _currentMode = TasMode.Nothing;
         }
 
+        protected override void OnLevelLoaded(string oldLevel, string newLevel)
+        {
+            if (_textDisplay == null)
+                CreateTextDisplay();
+        }
+
         protected override void OnLateUpdate()
         {
             // Update text display
-            if (_textDisplay == null)
-                CreateTextDisplay();
-
-            _textDisplay.text = $"Frame: {Time.frameCount}";
+            _textDisplay?.text = $"Frame: {Time.frameCount}";
 
             // If time is not frozen, increase the frame count
-            if (Time.timeScale > 0 && !Core.LevelManager.InsideChangeLevel && _currentMode != TasMode.Nothing)
-            {
-                //_currentFrame++;
-                if (_timeFrozen)
-                    FreezeTime();
-            }
+            //if (Time.timeScale > 0 && !Core.LevelManager.InsideChangeLevel && _currentMode != TasMode.Nothing)
+            //{
+            //    //_currentFrame++;
+            //    if (_timeFrozen)
+            //        FreezeTime();
+            //}
 
             // Button to toggle frozen time
             if (UnityEngine.Input.GetKeyDown(KeyCode.Minus))
@@ -95,41 +99,13 @@ namespace TasTool
 
         private void FrameAdvance()
         {
-            UnfreezeTime();
-            _timeFrozen = true;
+            ModLog.Warn($"Advancing time");
+            //UnfreezeTime();
+            //_timeFrozen = true;
         }
-
-        #region UI Display
-
-        private Text[] _textObjects;
-
-        private Text _textDisplay;
 
         private void CreateTextDisplay()
         {
-            //GameObject textObject = null;
-            //foreach (PlayerPurgePoints obj in Object.FindObjectsOfType<PlayerPurgePoints>())
-            //{
-            //    if (obj.name == "PurgePoints")
-            //    {
-            //        textObject = obj.transform.GetChild(1).gameObject;
-            //        break;
-            //    }
-            //}
-
-            //Transform parent = null;
-            //foreach (Canvas canvas in Object.FindObjectsOfType<Canvas>())
-            //{
-            //    if (canvas.name == "Game UI")
-            //    {
-            //        parent = canvas.transform;
-            //        break;
-            //    }
-            //}
-
-            //if (textObject == null || parent == null)
-            //    return;
-
             _textDisplay = UIModder.Create(new RectCreationOptions()
             {
                 XRange = Vector2.zero,
@@ -137,40 +113,15 @@ namespace TasTool
                 Name = "TAS display",
                 Parent = UIModder.Parents.CanvasHighRes,
                 Pivot = Vector2.zero,
-                Position = new Vector2(-15, -15),
-                Size = new Vector2(300, 60),
+                Position = new Vector2(10, 10),
+                //Size = new Vector2(300, 100),
             }).AddText(new TextCreationOptions()
             {
                 Alignment = TextAnchor.LowerLeft,
-                Contents = "Test txt"
+                FontSize = 42,
             });
-
-            //_textObjects = new Text[4];
-            //for (int i = 0; i < _textObjects.Length; i++)
-            //{
-            //    GameObject newText = Object.Instantiate(textObject, parent);
-            //    newText.name = "TasText";
-            //    newText.SetActive(true);
-
-            //    RectTransform rect = newText.GetComponent<RectTransform>();
-            //    rect.anchorMin = new Vector2(0f, 0f);
-            //    rect.anchorMax = new Vector2(0f, 0f);
-            //    rect.pivot = new Vector2(0f, 1f);
-            //    rect.anchoredPosition = new Vector2(10f + 150f * i, 90f);
-            //    rect.sizeDelta = new Vector2(250f, 50f);
-
-            //    Text text = newText.GetComponent<Text>();
-            //    text.color = Color.white;
-            //    text.text = string.Empty;
-            //    text.alignment = TextAnchor.LowerLeft;
-            //    text.horizontalOverflow = HorizontalWrapMode.Wrap;
-
-            //    _textObjects[i] = text;
-            //}
 
             ModLog.Info("Created text display");
         }
-
-        #endregion UI Display
     }
 }
