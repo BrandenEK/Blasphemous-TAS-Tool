@@ -12,12 +12,12 @@ namespace TasTool
         [DllImport("user32.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.StdCall)]
         public static extern short GetAsyncKeyState(int vKey);
         const int PAUSE_KEY = 0xBD;
-        const int ADVANCE_KEY = 0xBB;
+        const int UNPAUSE_KEY = 0xBB;
+        const int ADVANCE_KEY = 0x08;
 
         public TAS() : base(ModInfo.MOD_ID, ModInfo.MOD_NAME, ModInfo.MOD_AUTHOR, ModInfo.MOD_VERSION) { }
         
         private bool _timeFrozen;
-        private long _lastPauseTime = System.DateTime.Now.Ticks;
         private long _lastAdvanceTime = System.DateTime.Now.Ticks;
 
         private Text _textDisplay;
@@ -40,7 +40,7 @@ namespace TasTool
                     Thread.Sleep(10);
 
                     // Check for unfreeze input
-                    if ((System.DateTime.Now.Ticks - _lastPauseTime > 2_000_000) && (GetAsyncKeyState(PAUSE_KEY) & 0x8000) > 0)
+                    if ((GetAsyncKeyState(UNPAUSE_KEY) & 0x8000) > 0)
                     {
                         UnfreezeTime();
                         break;
@@ -57,7 +57,7 @@ namespace TasTool
             else
             {
                 // Check for freeze input
-                if (Input.GetKeyDown(KeyCode.Minus))
+                if ((GetAsyncKeyState(PAUSE_KEY) & 0x8000) > 0)
                     FreezeTime();
             }
         }
@@ -66,14 +66,12 @@ namespace TasTool
         {
             ModLog.Warn("Freezing time");
             _timeFrozen = true;
-            _lastPauseTime = System.DateTime.Now.Ticks;
         }
 
         private void UnfreezeTime()
         {
             ModLog.Warn("Unfreezing time");
             _timeFrozen = false;
-            _lastPauseTime = System.DateTime.Now.Ticks;
         }
 
         private void AdvanceTime()
