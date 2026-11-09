@@ -17,6 +17,7 @@ namespace TasTool
         public TAS() : base(ModInfo.MOD_ID, ModInfo.MOD_NAME, ModInfo.MOD_AUTHOR, ModInfo.MOD_VERSION) { }
         
         private bool _timeFrozen;
+        private long _lastPauseTime = System.DateTime.Now.Ticks;
         private long _lastAdvanceTime = System.DateTime.Now.Ticks;
 
         private Text _textDisplay;
@@ -32,34 +33,32 @@ namespace TasTool
             // Update text display
             _textDisplay?.text = $"Frame: {Time.frameCount}";
 
-            // Check for freeze input
-            if (!_timeFrozen && Input.GetKeyDown(KeyCode.Minus))
-            {
-                FreezeTime();
-            }
-
-            // Frozen time loop
             if (_timeFrozen)
             {
                 while (true)
                 {
                     Thread.Sleep(10);
 
-                    Application.targetFrameRate = Application.targetFrameRate;
-
-                    if ((GetAsyncKeyState(PAUSE_KEY) & 0x8000) > 0)
+                    // Check for unfreeze input
+                    if ((System.DateTime.Now.Ticks - _lastPauseTime > 2_000_000) && (GetAsyncKeyState(PAUSE_KEY) & 0x8000) > 0)
                     {
                         UnfreezeTime();
                         break;
                     }
 
+                    // Check for advance input
                     if ((System.DateTime.Now.Ticks - _lastAdvanceTime > 2_000_000) && (GetAsyncKeyState(ADVANCE_KEY) & 0x8000) > 0)
                     {
                         AdvanceTime();
-                        _lastAdvanceTime = System.DateTime.Now.Ticks;
                         break;
                     }
                 }
+            }
+            else
+            {
+                // Check for freeze input
+                if (Input.GetKeyDown(KeyCode.Minus))
+                    FreezeTime();
             }
         }
 
@@ -67,17 +66,20 @@ namespace TasTool
         {
             ModLog.Warn("Freezing time");
             _timeFrozen = true;
+            _lastPauseTime = System.DateTime.Now.Ticks;
         }
 
         private void UnfreezeTime()
         {
             ModLog.Warn("Unfreezing time");
             _timeFrozen = false;
+            _lastPauseTime = System.DateTime.Now.Ticks;
         }
 
         private void AdvanceTime()
         {
             ModLog.Warn($"Advancing time");
+            _lastAdvanceTime = System.DateTime.Now.Ticks;
         }
 
         private void CreateTextDisplay()
