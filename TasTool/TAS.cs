@@ -1,14 +1,9 @@
-﻿using Framework.Managers;
-using Gameplay.UI.Others.UIGameLogic;
+﻿using Blasphemous.Framework.UI;
 using Blasphemous.ModdingAPI;
-using Rewired;
-using System.Collections.Generic;
-using System.IO;
+using System.Runtime.InteropServices;
+using System.Threading;
 using UnityEngine;
 using UnityEngine.UI;
-using System.Threading;
-using System.Runtime.InteropServices;
-using Blasphemous.Framework.UI;
 
 namespace TasTool
 {
@@ -25,13 +20,7 @@ namespace TasTool
         private bool _timeFrozen;
         private long _lastAdvanceTime = System.DateTime.Now.Ticks;
 
-        private TasMode _currentMode;
         private Text _textDisplay;
-
-        protected override void OnInitialize()
-        {
-            _currentMode = TasMode.Nothing;
-        }
 
         protected override void OnLevelLoaded(string oldLevel, string newLevel)
         {
@@ -44,31 +33,19 @@ namespace TasTool
             // Update text display
             _textDisplay?.text = $"Frame: {Time.frameCount}";
 
-            // If time is not frozen, increase the frame count
-            //if (Time.timeScale > 0 && !Core.LevelManager.InsideChangeLevel && _currentMode != TasMode.Nothing)
-            //{
-            //    //_currentFrame++;
-            //    if (_timeFrozen)
-            //        FreezeTime();
-            //}
-
-            // Button to toggle frozen time
-            if (UnityEngine.Input.GetKeyDown(KeyCode.Minus))
+            // Check for freeze input
+            if (Input.GetKeyDown(KeyCode.Minus))
             {
                 FreezeTime();
-                //if (_timeFrozen) UnfreezeTime();
-                //else FreezeTime();
             }
 
+            // Frozen time loop
             if (_timeFrozen)
             {
                 while (true)
                 {
                     Thread.Sleep(100);
 
-                    //_textObjects[0].text = $"Frame: {_currentFrame} (Paused)";
-
-                    //LogWarning("Checking input: " + GetAsyncKeyState(PAUSE_KEY));
                     if ((GetAsyncKeyState(PAUSE_KEY) & 0x8000) > 0)
                     {
                         UnfreezeTime();
@@ -77,7 +54,7 @@ namespace TasTool
 
                     if ((System.DateTime.Now.Ticks - _lastAdvanceTime > 5_000_000) && (GetAsyncKeyState(ADVANCE_KEY) & 0x8000) > 0)
                     {
-                        FrameAdvance();
+                        AdvanceTime();
                         _lastAdvanceTime = System.DateTime.Now.Ticks;
                         break;
                     }
@@ -97,11 +74,9 @@ namespace TasTool
             _timeFrozen = false;
         }
 
-        private void FrameAdvance()
+        private void AdvanceTime()
         {
             ModLog.Warn($"Advancing time");
-            //UnfreezeTime();
-            //_timeFrozen = true;
         }
 
         private void CreateTextDisplay()
@@ -114,7 +89,6 @@ namespace TasTool
                 Parent = UIModder.Parents.CanvasHighRes,
                 Pivot = Vector2.zero,
                 Position = new Vector2(10, 10),
-                //Size = new Vector2(300, 100),
             }).AddText(new TextCreationOptions()
             {
                 Alignment = TextAnchor.LowerLeft,
