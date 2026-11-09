@@ -15,10 +15,14 @@ namespace TasTool
         const int UNPAUSE_KEY = 0xBB;
         const int ADVANCE_KEY = 0x08;
 
+        const int TICKS_BETWEEN_KEYS = 2_000_000;
+        const int TICKS_BEFORE_UNFREEZE = 40_000_000;
+
         public TAS() : base(ModInfo.MOD_ID, ModInfo.MOD_NAME, ModInfo.MOD_AUTHOR, ModInfo.MOD_VERSION) { }
         
         private bool _timeFrozen;
         private long _lastAdvanceTime = System.DateTime.Now.Ticks;
+        private long _lastNormalTime = System.DateTime.Now.Ticks;
 
         private Text _textDisplay;
 
@@ -35,19 +39,21 @@ namespace TasTool
 
             if (_timeFrozen)
             {
+                _lastNormalTime = System.DateTime.Now.Ticks;
+
                 while (true)
                 {
                     Thread.Sleep(10);
 
                     // Check for unfreeze input
-                    if ((GetAsyncKeyState(UNPAUSE_KEY) & 0x8000) > 0)
+                    if ((GetAsyncKeyState(UNPAUSE_KEY) & 0x8000) > 0 || System.DateTime.Now.Ticks - _lastNormalTime > TICKS_BEFORE_UNFREEZE)
                     {
                         UnfreezeTime();
                         break;
                     }
 
                     // Check for advance input
-                    if ((System.DateTime.Now.Ticks - _lastAdvanceTime > 2_000_000) && (GetAsyncKeyState(ADVANCE_KEY) & 0x8000) > 0)
+                    if ((System.DateTime.Now.Ticks - _lastAdvanceTime > TICKS_BETWEEN_KEYS) && (GetAsyncKeyState(ADVANCE_KEY) & 0x8000) > 0)
                     {
                         AdvanceTime();
                         break;
